@@ -93,7 +93,7 @@ export interface IChipColorizer {
  */
 export interface ChipColor {
   classes: string;
-  category: 'keyword' | 'scheme' | 'domain';
+  category: 'keyword' | 'nonce' | 'hash' | 'scheme' | 'domain' | 'wildcard';
 }
 
 /**

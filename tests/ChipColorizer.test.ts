@@ -27,15 +27,38 @@ describe('ChipColorizer', () => {
       const result = colorizer.getColor("'strict-dynamic'");
       expect(result.category).toBe('keyword');
     });
+  });
 
-    it("should return keyword for nonce values like 'nonce-abc123'", () => {
+  describe('nonce sources (teal)', () => {
+    it("should return nonce category for 'nonce-abc123'", () => {
       const result = colorizer.getColor("'nonce-abc123def456'");
-      expect(result.category).toBe('keyword');
+      expect(result.category).toBe('nonce');
+      expect(result.classes).toContain('teal');
+      expect(result.classes).toContain('dark:');
     });
 
-    it("should return keyword for hash values like 'sha256-...'", () => {
+    it("should return nonce category for 'nonce-rAnd0m'", () => {
+      const result = colorizer.getColor("'nonce-rAnd0m'");
+      expect(result.category).toBe('nonce');
+    });
+  });
+
+  describe('hash sources (emerald)', () => {
+    it("should return hash category for 'sha256-...'", () => {
       const result = colorizer.getColor("'sha256-abcdef1234567890'");
-      expect(result.category).toBe('keyword');
+      expect(result.category).toBe('hash');
+      expect(result.classes).toContain('emerald');
+      expect(result.classes).toContain('dark:');
+    });
+
+    it("should return hash category for 'sha384-...'", () => {
+      const result = colorizer.getColor("'sha384-xyz'");
+      expect(result.category).toBe('hash');
+    });
+
+    it("should return hash category for 'sha512-...'", () => {
+      const result = colorizer.getColor("'sha512-longHashValue'");
+      expect(result.category).toBe('hash');
     });
   });
 
@@ -64,6 +87,15 @@ describe('ChipColorizer', () => {
     it('should return scheme category for mediastream:', () => {
       const result = colorizer.getColor('mediastream:');
       expect(result.category).toBe('scheme');
+    });
+  });
+
+  describe('wildcard (red)', () => {
+    it('should return wildcard category for standalone *', () => {
+      const result = colorizer.getColor('*');
+      expect(result.category).toBe('wildcard');
+      expect(result.classes).toContain('red');
+      expect(result.classes).toContain('dark:');
     });
   });
 
