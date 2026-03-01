@@ -195,6 +195,21 @@ export class EditorApp {
         return app.generator.generate(this.directives);
       },
 
+      getCspLength(): number {
+        return this.generateCsp().length;
+      },
+
+      getCspLengthColor(): string {
+        const length = this.getCspLength();
+        if (length < 2048) {
+          return 'text-emerald-400';
+        } else if (length < 4096) {
+          return 'text-amber-400';
+        } else {
+          return 'text-red-400';
+        }
+      },
+
       addValue(directive: string, event: KeyboardEvent) {
         event.preventDefault();
         const input = event.target as HTMLInputElement;

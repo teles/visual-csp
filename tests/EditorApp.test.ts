@@ -409,4 +409,44 @@ describe('EditorApp', () => {
     
     expect(data.rawCsp).toBe('');
   });
+
+  it('should calculate CSP length correctly', () => {
+    const data = app.createAlpineData();
+    data.directives = { 'default-src': ["'self'"] };
+    
+    const length = data.getCspLength();
+    const generatedCsp = data.generateCsp();
+    
+    expect(length).toBe(generatedCsp.length);
+    expect(length).toBeGreaterThan(0);
+  });
+
+  it('should return green color for short CSP (< 2048 chars)', () => {
+    const data = app.createAlpineData();
+    data.directives = { 'default-src': ["'self'"] };
+    
+    const color = data.getCspLengthColor();
+    
+    expect(color).toBe('text-emerald-400');
+  });
+
+  it('should return yellow color for medium CSP (2048-4096 chars)', () => {
+    const data = app.createAlpineData();
+    // Mock generator to return a string with 3000 characters
+    vi.mocked(mockGenerator.generate).mockReturnValue('x'.repeat(3000));
+    
+    const color = data.getCspLengthColor();
+    
+    expect(color).toBe('text-amber-400');
+  });
+
+  it('should return red color for long CSP (> 4096 chars)', () => {
+    const data = app.createAlpineData();
+    // Mock generator to return a string with 5000 characters
+    vi.mocked(mockGenerator.generate).mockReturnValue('x'.repeat(5000));
+    
+    const color = data.getCspLengthColor();
+    
+    expect(color).toBe('text-red-400');
+  });
 });
