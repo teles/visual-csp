@@ -16,6 +16,8 @@ export interface StatePayload {
   u: string;
   /** CSP text */
   c: string;
+  /** Report-Only mode */
+  r?: boolean;
 }
 
 /**
@@ -26,6 +28,7 @@ export interface EditorState {
   projectName: string;
   projectUrl: string;
   rawCsp: string;
+  isReportOnly: boolean;
 }
 
 /**

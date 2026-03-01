@@ -57,6 +57,7 @@ export class EditorApp {
       collapsedDirectives: {} as Record<string, boolean>,
       templates: app.templateService.getTemplates(),
       showTemplates: false,
+      isReportOnly: false,
 
       // Alpine lifecycle
       init() {
@@ -74,6 +75,7 @@ export class EditorApp {
           this.projectName = state.projectName;
           this.projectUrl = state.projectUrl;
           this.rawCsp = state.rawCsp;
+          this.isReportOnly = state.isReportOnly;
           if (this.rawCsp) {
             this.parseCsp();
           }
@@ -97,6 +99,7 @@ export class EditorApp {
           projectName: this.projectName,
           projectUrl: this.projectUrl,
           rawCsp: this.rawCsp,
+          isReportOnly: this.isReportOnly,
         });
         this.evaluateFindings();
       },
@@ -289,6 +292,24 @@ export class EditorApp {
         return !!this.collapsedDirectives[directive];
       },
 
+      toggleReportOnly() {
+        this.isReportOnly = !this.isReportOnly;
+        this.updateUrl();
+      },
+
+      getHeaderName(): string {
+        return this.isReportOnly
+          ? 'Content-Security-Policy-Report-Only'
+          : 'Content-Security-Policy';
+      },
+
+      hasReportingDirective(): boolean {
+        return (
+          this.directives['report-uri']?.length > 0 ||
+          this.directives['report-to']?.length > 0
+        );
+      },
+
       resetEditor() {
         this.directives = {};
         this.rawCsp = '';
@@ -298,6 +319,7 @@ export class EditorApp {
         this.directiveWarning = '';
         this.valueWarnings = {};
         this.rawCspWarning = '';
+        this.isReportOnly = false;
         this.updateUrl();
       },
 

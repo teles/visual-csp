@@ -168,6 +168,7 @@ describe('EditorApp', () => {
       projectName: 'Test Project',
       projectUrl: 'https://test.com',
       rawCsp: "default-src 'self'",
+      isReportOnly: false,
     };
     vi.mocked(mockUrlState.load).mockReturnValue(savedState);
 
@@ -315,6 +316,7 @@ describe('EditorApp', () => {
       projectName: 'Test',
       projectUrl: '',
       rawCsp: '',
+      isReportOnly: false,
     });
   });
 
@@ -408,5 +410,93 @@ describe('EditorApp', () => {
     data.applyTemplate('test');
     
     expect(data.rawCsp).toBe('');
+  });
+
+  it('should initialize with report-only mode disabled', () => {
+    const data = app.createAlpineData();
+    expect(data.isReportOnly).toBe(false);
+  });
+
+  it('should toggle report-only mode', () => {
+    const data = app.createAlpineData();
+    expect(data.isReportOnly).toBe(false);
+
+    data.toggleReportOnly();
+    expect(data.isReportOnly).toBe(true);
+    expect(mockUrlState.save).toHaveBeenCalled();
+
+    data.toggleReportOnly();
+    expect(data.isReportOnly).toBe(false);
+  });
+
+  it('should return correct header name based on report-only state', () => {
+    const data = app.createAlpineData();
+    
+    expect(data.getHeaderName()).toBe('Content-Security-Policy');
+    
+    data.isReportOnly = true;
+    expect(data.getHeaderName()).toBe('Content-Security-Policy-Report-Only');
+    
+    data.isReportOnly = false;
+    expect(data.getHeaderName()).toBe('Content-Security-Policy');
+  });
+
+  it('should detect reporting directive report-uri', () => {
+    const data = app.createAlpineData();
+    expect(data.hasReportingDirective()).toBe(false);
+    
+    data.directives = { 'report-uri': ['https://report.example.com'] };
+    expect(data.hasReportingDirective()).toBe(true);
+  });
+
+  it('should detect reporting directive report-to', () => {
+    const data = app.createAlpineData();
+    expect(data.hasReportingDirective()).toBe(false);
+    
+    data.directives = { 'report-to': ['endpoint-name'] };
+    expect(data.hasReportingDirective()).toBe(true);
+  });
+
+  it('should not detect reporting directive when values are empty', () => {
+    const data = app.createAlpineData();
+    data.directives = { 'report-uri': [] };
+    expect(data.hasReportingDirective()).toBe(false);
+  });
+
+  it('should load report-only state from URL', () => {
+    const savedState: EditorState = {
+      directives: {},
+      projectName: '',
+      projectUrl: '',
+      rawCsp: '',
+      isReportOnly: true,
+    };
+    vi.mocked(mockUrlState.load).mockReturnValue(savedState);
+
+    const data = app.createAlpineData();
+    data.init();
+
+    expect(data.isReportOnly).toBe(true);
+  });
+
+  it('should save report-only state to URL', () => {
+    const data = app.createAlpineData();
+    data.isReportOnly = true;
+    data.updateUrl();
+
+    expect(mockUrlState.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isReportOnly: true,
+      })
+    );
+  });
+
+  it('should reset report-only state when resetting editor', () => {
+    const data = app.createAlpineData();
+    data.isReportOnly = true;
+    
+    data.resetEditor();
+    
+    expect(data.isReportOnly).toBe(false);
   });
 });

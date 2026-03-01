@@ -26,6 +26,11 @@ export class UrlStateManager implements IUrlStateManager {
       c: cspText,
     };
 
+    // Only include 'r' if true to minimize URL size
+    if (state.isReportOnly) {
+      payload.r = true;
+    }
+
     const json = JSON.stringify(payload);
     const utf8Arr = new TextEncoder().encode(json);
     const compressed = deflate(utf8Arr);
@@ -65,6 +70,7 @@ export class UrlStateManager implements IUrlStateManager {
       let rawCsp = '';
       let projectName = '';
       let projectUrl = '';
+      let isReportOnly = false;
 
       try {
         // JSON format (v4+)
@@ -72,6 +78,7 @@ export class UrlStateManager implements IUrlStateManager {
         projectName = data.n || '';
         projectUrl = data.u || '';
         rawCsp = data.c || '';
+        isReportOnly = data.r === true;
       } catch {
         // Fallback: raw CSP string (v3 format)
         rawCsp = decodedText;
@@ -82,6 +89,7 @@ export class UrlStateManager implements IUrlStateManager {
         projectName,
         projectUrl,
         rawCsp,
+        isReportOnly,
       };
     } catch (e) {
       console.error('Invalid compressed URL state.', e);
