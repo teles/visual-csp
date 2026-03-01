@@ -328,4 +328,33 @@ describe('EditorApp', () => {
     localStorage.removeItem('darkMode');
     document.documentElement.classList.remove('dark');
   });
+
+  it('should toggle collapse state for directive', () => {
+    const data = app.createAlpineData();
+    data.directives = { 'script-src': ["'self'"] };
+
+    expect(data.isCollapsed('script-src')).toBe(false);
+
+    data.toggleCollapse('script-src');
+    expect(data.isCollapsed('script-src')).toBe(true);
+
+    data.toggleCollapse('script-src');
+    expect(data.isCollapsed('script-src')).toBe(false);
+  });
+
+  it('should return false for non-existent directive collapse state', () => {
+    const data = app.createAlpineData();
+    expect(data.isCollapsed('non-existent')).toBe(false);
+  });
+
+  it('should clean collapse state when directive is removed', () => {
+    const data = app.createAlpineData();
+    data.directives = { 'script-src': ["'self'"] };
+    data.toggleCollapse('script-src');
+    expect(data.isCollapsed('script-src')).toBe(true);
+
+    data.removeDirective('script-src');
+    expect(data.directives['script-src']).toBeUndefined();
+    expect(data.isCollapsed('script-src')).toBe(false);
+  });
 });

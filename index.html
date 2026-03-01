@@ -233,6 +233,18 @@
                       </div>
                       <div class="action-buttons flex gap-1">
                         <button 
+                          @click="toggleCollapse(directive)"
+                          class="p-1 text-slate-400 hover:text-indigo-500 transition-colors"
+                          :title="isCollapsed(directive) ? 'Expand' : 'Collapse'"
+                        >
+                          <svg x-show="!isCollapsed(directive)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                          <svg x-show="isCollapsed(directive)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                          </svg>
+                        </button>
+                        <button 
                           @click="removeDirective(directive)"
                           class="p-1 text-slate-400 hover:text-red-500 transition-colors"
                           title="Remove Directive"
@@ -243,6 +255,7 @@
                         </button>
                       </div>
                     </div>
+                    <div x-show="!isCollapsed(directive)" x-collapse>
                     <div class="flex flex-wrap gap-2 mb-4">
                       <template x-for="(val, index) in values" :key="index">
                         <span 
@@ -279,6 +292,7 @@
                     >
                       <span class="text-amber-600 dark:text-amber-400 font-bold">⚠</span>
                       <span x-text="valueWarnings[directive]"></span>
+                    </div>
                     </div>
                   </div>
                 </template>

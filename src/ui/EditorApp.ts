@@ -52,6 +52,7 @@ export class EditorApp {
       directiveWarning: '' as string,
       valueWarnings: {} as Record<string, string>,
       rawCspWarning: '' as string,
+      collapsedDirectives: {} as Record<string, boolean>,
 
       // Alpine lifecycle
       init() {
@@ -272,7 +273,16 @@ export class EditorApp {
 
       removeDirective(directive: string) {
         delete this.directives[directive];
+        delete this.collapsedDirectives[directive];
         this.updateUrl();
+      },
+
+      toggleCollapse(directive: string) {
+        this.collapsedDirectives[directive] = !this.collapsedDirectives[directive];
+      },
+
+      isCollapsed(directive: string): boolean {
+        return !!this.collapsedDirectives[directive];
       },
 
       resetEditor() {
