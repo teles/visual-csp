@@ -100,6 +100,26 @@ export interface ICspValidator {
 }
 
 /**
+ * Template definition for CSP policies
+ */
+export interface CspTemplate {
+  id: string;
+  name: string;
+  description: string;
+  policy: CspDirectives;
+}
+
+/**
+ * Contract for managing CSP templates.
+ * Single Responsibility: provides predefined policy templates.
+ */
+export interface ICspTemplateService {
+  getTemplates(): CspTemplate[];
+  getTemplateById(id: string): CspTemplate | undefined;
+  applyTemplate(id: string): CspDirectives | null;
+}
+
+/**
  * Contract for chip color classification.
  * Single Responsibility: determines visual classification of CSP values.
  */

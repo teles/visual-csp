@@ -6,6 +6,7 @@ import type {
   ICspEvaluator,
   ICspGenerator,
   ICspParser,
+  ICspTemplateService,
   ICspValidator,
   IUrlStateManager,
 } from '../core/types';
@@ -28,7 +29,8 @@ export class EditorApp {
     private urlState: IUrlStateManager,
     private clipboard: IClipboardService,
     private colorizer: IChipColorizer,
-    private validator: ICspValidator
+    private validator: ICspValidator,
+    private templateService: ICspTemplateService
   ) {}
 
   /**
@@ -52,6 +54,8 @@ export class EditorApp {
       directiveWarning: '' as string,
       valueWarnings: {} as Record<string, string>,
       rawCspWarning: '' as string,
+      templates: app.templateService.getTemplates(),
+      showTemplates: false,
 
       // Alpine lifecycle
       init() {
@@ -285,6 +289,16 @@ export class EditorApp {
         this.valueWarnings = {};
         this.rawCspWarning = '';
         this.updateUrl();
+      },
+
+      applyTemplate(templateId: string) {
+        const policy = app.templateService.applyTemplate(templateId);
+        if (policy) {
+          this.directives = policy;
+          this.rawCsp = '';
+          this.showTemplates = false;
+          this.updateUrl();
+        }
       },
 
       clearWarning(type: 'directive' | 'value', directive?: string) {

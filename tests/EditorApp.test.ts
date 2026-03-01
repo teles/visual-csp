@@ -8,7 +8,9 @@ import type {
   IClipboardService,
   IChipColorizer,
   ICspValidator,
+  ICspTemplateService,
   CspDirectives,
+  CspTemplate,
   EditorState,
   EvaluationFinding,
   ChipColor,
@@ -77,6 +79,25 @@ function createMockValidator(): ICspValidator {
   };
 }
 
+function createMockTemplateService(): ICspTemplateService {
+  const mockTemplates: CspTemplate[] = [
+    {
+      id: 'test',
+      name: 'Test Template',
+      description: 'A test template',
+      policy: { 'default-src': ["'self'"] },
+    },
+  ];
+  return {
+    getTemplates: vi.fn(() => mockTemplates),
+    getTemplateById: vi.fn((id: string) => mockTemplates.find(t => t.id === id)),
+    applyTemplate: vi.fn((id: string) => {
+      const template = mockTemplates.find(t => t.id === id);
+      return template ? JSON.parse(JSON.stringify(template.policy)) : null;
+    }),
+  };
+}
+
 describe('EditorApp', () => {
   let mockParser: ICspParser;
   let mockGenerator: ICspGenerator;
@@ -85,6 +106,7 @@ describe('EditorApp', () => {
   let mockClipboard: IClipboardService;
   let mockColorizer: IChipColorizer;
   let mockValidator: ICspValidator;
+  let mockTemplateService: ICspTemplateService;
   let app: EditorApp;
 
   beforeEach(() => {
@@ -95,7 +117,8 @@ describe('EditorApp', () => {
     mockClipboard = createMockClipboard();
     mockColorizer = createMockColorizer();
     mockValidator = createMockValidator();
-    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator);
+    mockTemplateService = createMockTemplateService();
+    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService);
 
     // Mock matchMedia for dark mode tests
     Object.defineProperty(window, 'matchMedia', {
@@ -327,5 +350,34 @@ describe('EditorApp', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     localStorage.removeItem('darkMode');
     document.documentElement.classList.remove('dark');
+  });
+
+  it('should load templates from template service', () => {
+    const data = app.createAlpineData();
+    expect(data.templates).toBeDefined();
+    expect(data.templates.length).toBeGreaterThan(0);
+    expect(data.templates[0]).toHaveProperty('id');
+    expect(data.templates[0]).toHaveProperty('name');
+    expect(data.templates[0]).toHaveProperty('description');
+  });
+
+  it('should apply template to directives', () => {
+    const data = app.createAlpineData();
+    expect(Object.keys(data.directives).length).toBe(0);
+
+    data.applyTemplate('test');
+    
+    expect(Object.keys(data.directives).length).toBeGreaterThan(0);
+    expect(data.directives['default-src']).toEqual(["'self'"]);
+    expect(data.showTemplates).toBe(false);
+  });
+
+  it('should clear rawCsp when applying template', () => {
+    const data = app.createAlpineData();
+    data.rawCsp = 'some csp';
+    
+    data.applyTemplate('test');
+    
+    expect(data.rawCsp).toBe('');
   });
 });
