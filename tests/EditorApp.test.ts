@@ -10,6 +10,7 @@ import type {
   ICspValidator,
   ICspTemplateService,
   ICspReportExporter,
+  ICspExporter,
   CspDirectives,
   CspTemplate,
   EditorState,
@@ -108,6 +109,22 @@ function createMockReportExporter(): ICspReportExporter {
   };
 }
 
+function createMockCspExporter(): ICspExporter {
+  return {
+    exportAsHtml: vi.fn((csp: string) => `<meta http-equiv="Content-Security-Policy" content="${csp}">`),
+    exportAsNginx: vi.fn((csp: string) => `add_header Content-Security-Policy "${csp}" always;`),
+    exportAsApache: vi.fn((csp: string) => `Header set Content-Security-Policy "${csp}"`),
+    exportAsCloudflare: vi.fn((csp: string) => `/*\n  Content-Security-Policy: ${csp}`),
+    exportAsExpress: vi.fn((csp: string) => `app.use((req, res, next) => {\n  res.setHeader("Content-Security-Policy", "${csp}");\n  next();\n});`),
+    export: vi.fn((csp: string) => csp),
+    downloadAsExpress: vi.fn(),
+    downloadAsCloudflare: vi.fn(),
+    downloadAsNginx: vi.fn(),
+    downloadAsApache: vi.fn(),
+    downloadAsHtml: vi.fn(),
+  };
+}
+
 describe('EditorApp', () => {
   let mockParser: ICspParser;
   let mockGenerator: ICspGenerator;
@@ -118,6 +135,7 @@ describe('EditorApp', () => {
   let mockValidator: ICspValidator;
   let mockTemplateService: ICspTemplateService;
   let mockReportExporter: ICspReportExporter;
+  let mockCspExporter: ICspExporter;
   let app: EditorApp;
 
   beforeEach(() => {
@@ -130,7 +148,8 @@ describe('EditorApp', () => {
     mockValidator = createMockValidator();
     mockTemplateService = createMockTemplateService();
     mockReportExporter = createMockReportExporter();
-    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter);
+    mockCspExporter = createMockCspExporter();
+    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter);
 
     // Mock matchMedia for dark mode tests
     Object.defineProperty(window, 'matchMedia', {
