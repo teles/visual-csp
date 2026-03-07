@@ -6,3 +6,38 @@
 html {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Drag and Drop Styles */
+.directive-card {
+  touch-action: none;
+  user-select: none;
+}
+
+.directive-card[draggable="true"]:hover {
+  cursor: grab;
+}
+
+.directive-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.drag-handle:active {
+  cursor: grabbing !important;
+}
+
+/* Smooth drag feedback */
+.directive-card {
+  will-change: transform, opacity;
+}
+
+/* Drop zone indicator animation */
+@keyframes pulse-drop-zone {
+  0%, 100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scaleX(0.98);
+  }
+}
