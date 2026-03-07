@@ -62,6 +62,7 @@ export class EditorApp {
       collapsedDirectives: {} as Record<string, boolean>,
       templates: app.templateService.getTemplates(),
       showTemplates: false,
+      directiveFilter: '',
 
       // Alpine lifecycle
       init() {
@@ -309,6 +310,45 @@ export class EditorApp {
         return !!this.collapsedDirectives[directive];
       },
 
+      // --- Filter ---
+      get filteredDirectives(): CspDirectives {
+        if (!this.directiveFilter.trim()) {
+          return this.directives;
+        }
+
+        const filter = this.directiveFilter.toLowerCase().trim();
+        const filtered: CspDirectives = {};
+
+        for (const [directive, values] of Object.entries(this.directives)) {
+          // Match directive name
+          if (directive.toLowerCase().includes(filter)) {
+            filtered[directive] = values;
+            continue;
+          }
+
+          // Match values
+          const hasMatchingValue = values.some((value) =>
+            value.toLowerCase().includes(filter)
+          );
+          if (hasMatchingValue) {
+            filtered[directive] = values;
+          }
+        }
+
+        return filtered;
+      },
+
+      getFilteredCount(): { shown: number; total: number } {
+        return {
+          shown: Object.keys(this.filteredDirectives).length,
+          total: Object.keys(this.directives).length,
+        };
+      },
+
+      clearFilter() {
+        this.directiveFilter = '';
+      },
+
       resetEditor() {
         this.directives = {};
         this.rawCsp = '';
@@ -318,6 +358,7 @@ export class EditorApp {
         this.directiveWarning = '';
         this.valueWarnings = {};
         this.rawCspWarning = '';
+        this.directiveFilter = '';
         this.updateUrl();
       },
 
