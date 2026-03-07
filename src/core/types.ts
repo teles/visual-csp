@@ -123,6 +123,29 @@ export interface ICspReportExporter {
 }
 
 /**
+ * Export format for CSP server configurations.
+ */
+export type ExportFormat = 'html' | 'nginx' | 'apache' | 'cloudflare' | 'express';
+
+/**
+ * Contract for exporting CSP in different server configuration formats.
+ * Single Responsibility: handles CSP formatting for various server environments.
+ */
+export interface ICspExporter {
+  exportAsHtml(csp: string): string;
+  exportAsNginx(csp: string): string;
+  exportAsApache(csp: string): string;
+  exportAsCloudflare(csp: string): string;
+  exportAsExpress(csp: string): string;
+  export(csp: string, format: ExportFormat): string;
+  downloadAsExpress(csp: string): void;
+  downloadAsCloudflare(csp: string): void;
+  downloadAsNginx(csp: string): void;
+  downloadAsApache(csp: string): void;
+  downloadAsHtml(csp: string): void;
+}
+
+/**
  * Template definition for CSP policies
  */
 export interface CspTemplate {

@@ -4,6 +4,7 @@ import type {
   IChipColorizer,
   IClipboardService,
   ICspEvaluator,
+  ICspExporter,
   ICspGenerator,
   ICspParser,
   ICspReportExporter,
@@ -33,7 +34,8 @@ export class EditorApp {
     private colorizer: IChipColorizer,
     private validator: ICspValidator,
     private templateService: ICspTemplateService,
-    private reportExporter: ICspReportExporter
+    private reportExporter: ICspReportExporter,
+    private cspExporter: ICspExporter
   ) {}
 
   /**
@@ -408,6 +410,32 @@ export class EditorApp {
           findings: this.findings,
           rawCsp: this.generateCsp(),
         };
+      },
+
+      // --- Server Config Export ---
+      downloadAsExpress() {
+        const csp = this.generateCsp();
+        app.cspExporter.downloadAsExpress(csp);
+      },
+
+      downloadAsCloudflare() {
+        const csp = this.generateCsp();
+        app.cspExporter.downloadAsCloudflare(csp);
+      },
+
+      downloadAsNginx() {
+        const csp = this.generateCsp();
+        app.cspExporter.downloadAsNginx(csp);
+      },
+
+      downloadAsApache() {
+        const csp = this.generateCsp();
+        app.cspExporter.downloadAsApache(csp);
+      },
+
+      downloadAsHtmlMeta() {
+        const csp = this.generateCsp();
+        app.cspExporter.downloadAsHtml(csp);
       },
     };
   }
