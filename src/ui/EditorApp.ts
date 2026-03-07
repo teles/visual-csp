@@ -365,6 +365,45 @@ export class EditorApp {
         return app.colorizer.getColor(val).classes;
       },
 
+      getColoredCsp(): string {
+        const csp = this.generateCsp();
+        // Split by semicolon to get directives
+        const directives = csp.split(';').map(d => d.trim()).filter(Boolean);
+        const coloredDirectives = directives.map(directive => {
+          const [directiveName, ...values] = directive.split(/\s+/);
+          // Color the directive name
+          const coloredDirective = `<span class="text-indigo-700 dark:text-indigo-300 font-semibold">${directiveName}</span>`;
+          // Color each value
+          const coloredValues = values.map(value => {
+            const colorInfo = app.colorizer.getColor(value);
+            const colorClass = (() => {
+              switch (colorInfo.category) {
+                case 'keyword':
+                  return 'text-purple-700 dark:text-purple-400';
+                case 'nonce':
+                  return 'text-teal-700 dark:text-teal-400';
+                case 'hash':
+                  return 'text-emerald-700 dark:text-emerald-400';
+                case 'scheme':
+                  return 'text-amber-700 dark:text-amber-400';
+                case 'domain':
+                  return 'text-blue-700 dark:text-blue-400';
+                case 'wildcard':
+                  return 'text-red-700 dark:text-red-400';
+                default:
+                  return 'text-slate-700 dark:text-slate-300';
+              }
+            })();
+            
+            return `<span class="${colorClass}">${value}</span>`;
+          }).join(' ');
+          
+          return coloredValues ? `${coloredDirective} ${coloredValues}` : coloredDirective;
+        });
+        
+        return coloredDirectives.join('<span class="text-slate-400 dark:text-slate-500">;</span> ');
+      },
+
       // --- Security Evaluation ---
       evaluateFindings() {
         const csp = this.generateCsp();
