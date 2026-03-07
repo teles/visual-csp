@@ -573,29 +573,36 @@
           <section
             x-show="findings.length > 0"
             x-transition
-            class="bg-white dark:bg-slate-800 rounded-lg shadow p-6 border border-slate-200 dark:border-slate-700"
+            class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700"
           >
-            <h2 class="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              🔍 Security Findings
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
+              <h4 class="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-slate-900 dark:text-white">
+                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Security Findings
+              </h4>
               <span 
-                class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300"
+                class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300"
                 x-text="'(' + findings.length + ' issue' + (findings.length !== 1 ? 's' : '') + ')'"
               ></span>
-            </h2>
-            <div class="space-y-3">
-              <template x-for="(finding, index) in findings" :key="index">
-                <div 
-                  class="p-3 border rounded-lg text-sm"
-                  :class="getSeverityColor(finding)"
-                >
-                  <div class="flex justify-between items-start mb-1">
-                    <span class="font-mono font-semibold text-xs" x-text="finding.directive"></span>
-                    <span class="text-xs font-bold uppercase tracking-wide" x-text="finding.severityLabel"></span>
+            </div>
+            <div class="p-6 bg-white dark:bg-slate-900">
+              <div class="space-y-3">
+                <template x-for="(finding, index) in findings" :key="index">
+                  <div 
+                    class="p-3 border rounded-lg text-sm"
+                    :class="getSeverityColor(finding)"
+                  >
+                    <div class="flex justify-between items-start mb-1">
+                      <span class="font-mono font-semibold text-xs" x-text="finding.directive"></span>
+                      <span class="text-xs font-bold uppercase tracking-wide" x-text="finding.severityLabel"></span>
+                    </div>
+                    <p class="text-sm" x-text="finding.description"></p>
+                    <span x-show="finding.value" class="text-xs mono text-gray-500 dark:text-gray-400 mt-1 inline-block" x-text="'Value: ' + finding.value"></span>
                   </div>
-                  <p class="text-sm" x-text="finding.description"></p>
-                  <span x-show="finding.value" class="text-xs mono text-gray-500 dark:text-gray-400 mt-1 inline-block" x-text="'Value: ' + finding.value"></span>
-                </div>
-              </template>
+                </template>
+              </div>
             </div>
           </section>
 
