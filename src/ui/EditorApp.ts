@@ -63,6 +63,9 @@ export class EditorApp {
       templates: app.templateService.getTemplates(),
       showTemplates: false,
       directiveFilter: '',
+      draggedDirective: null as string | null,
+      dragOverDirective: null as string | null,
+      dragDirection: 'below' as 'above' | 'below',
 
       // Alpine lifecycle
       init() {
@@ -347,6 +350,122 @@ export class EditorApp {
 
       clearFilter() {
         this.directiveFilter = '';
+      },
+
+      // --- Drag and Drop Reordering ---
+      getDirectiveKeys(): string[] {
+        return Object.keys(this.directives);
+      },
+
+      onDragStart(directive: string) {
+        this.draggedDirective = directive;
+      },
+
+      onDragEnd() {
+        this.draggedDirective = null;
+        this.dragOverDirective = null;
+      },
+
+      onDragOver(directive: string) {
+        this.dragOverDirective = directive;
+        
+        // Calculate drag direction based on indices
+        if (this.draggedDirective && this.draggedDirective !== directive) {
+          const keys = this.getDirectiveKeys();
+          const fromIndex = keys.indexOf(this.draggedDirective);
+          const toIndex = keys.indexOf(directive);
+          
+          // If dragging downward (from smaller to larger index), show line below
+          // If dragging upward (from larger to smaller index), show line above
+          this.dragDirection = fromIndex < toIndex ? 'below' : 'above';
+        }
+      },
+
+      onDragLeave() {
+        this.dragOverDirective = null;
+      },
+
+      onDrop(targetDirective: string) {
+        if (!this.draggedDirective || this.draggedDirective === targetDirective) {
+          this.draggedDirective = null;
+          this.dragOverDirective = null;
+          return;
+        }
+
+        const keys = this.getDirectiveKeys();
+        const fromIndex = keys.indexOf(this.draggedDirective);
+        const toIndex = keys.indexOf(targetDirective);
+
+        if (fromIndex === -1 || toIndex === -1) {
+          this.draggedDirective = null;
+          this.dragOverDirective = null;
+          return;
+        }
+
+        this.moveDirective(fromIndex, toIndex);
+        this.draggedDirective = null;
+        this.dragOverDirective = null;
+      },
+
+      moveDirective(fromIndex: number, toIndex: number) {
+        const keys = this.getDirectiveKeys();
+        const newDirectives: CspDirectives = {};
+
+        // Reorder keys
+        const reorderedKeys = [...keys];
+        const [movedKey] = reorderedKeys.splice(fromIndex, 1);
+        reorderedKeys.splice(toIndex, 0, movedKey);
+
+        // Rebuild directives object with new order
+        for (const key of reorderedKeys) {
+          newDirectives[key] = this.directives[key];
+        }
+
+        this.directives = newDirectives;
+        this.updateUrl();
+      },
+
+      moveDirectiveUp(directive: string) {
+        const keys = this.getDirectiveKeys();
+        const index = keys.indexOf(directive);
+        if (index > 0) {
+          this.moveDirective(index, index - 1);
+        }
+      },
+
+      moveDirectiveDown(directive: string) {
+        const keys = this.getDirectiveKeys();
+        const index = keys.indexOf(directive);
+        if (index < keys.length - 1 && index !== -1) {
+          this.moveDirective(index, index + 1);
+        }
+      },
+
+      canMoveUp(directive: string): boolean {
+        const keys = this.getDirectiveKeys();
+        return keys.indexOf(directive) > 0;
+      },
+
+      canMoveDown(directive: string): boolean {
+        const keys = this.getDirectiveKeys();
+        const index = keys.indexOf(directive);
+        return index !== -1 && index < keys.length - 1;
+      },
+
+      isDragging(directive: string): boolean {
+        return this.draggedDirective === directive;
+      },
+
+      isDragOver(directive: string): boolean {
+        return this.dragOverDirective === directive && this.draggedDirective !== directive;
+      },
+
+      isDragOverAbove(directive: string): boolean {
+        return this.isDragOver(directive) && this.dragDirection === 'above';
+      },
+
+      isDragOverBelow(directive: string): boolean {
+        return this.isDragOver(directive) && this.dragDirection === 'below';
       },
 
       resetEditor() {
