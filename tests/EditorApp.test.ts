@@ -703,6 +703,7 @@ describe('EditorApp', () => {
     vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
       url: 'https://example.com',
       csp: null,
+      title: null,
       message: 'No CSP header found',
     });
 
