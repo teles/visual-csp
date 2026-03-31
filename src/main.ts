@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import { CspParser, CspGenerator, CspSecurityEvaluator, CspValidator } from './core';
 import { CspTemplateService } from './core/CspTemplates';
+import { CspQuiz } from './core/CspQuiz';
 import { UrlStateManager, ClipboardService, CspReportExporter, CspExporter } from './services';
 import { EditorApp, ChipColorizer } from './ui';
 
@@ -17,6 +18,7 @@ const validator = new CspValidator();
 const templateService = new CspTemplateService();
 const reportExporter = new CspReportExporter();
 const cspExporter = new CspExporter();
+const quiz = new CspQuiz();
 
 const editorApp = new EditorApp(
   parser,
@@ -28,7 +30,8 @@ const editorApp = new EditorApp(
   validator,
   templateService,
   reportExporter,
-  cspExporter
+  cspExporter,
+  quiz
 );
 
 // Register Alpine.js component

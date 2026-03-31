@@ -11,6 +11,7 @@ import type {
   ICspTemplateService,
   ICspReportExporter,
   ICspExporter,
+  ICspQuiz,
   CspDirectives,
   CspTemplate,
   EditorState,
@@ -125,6 +126,32 @@ function createMockCspExporter(): ICspExporter {
   };
 }
 
+function createMockQuiz(): ICspQuiz {
+  return {
+    getQuestions: vi.fn(() => [
+      {
+        id: 'appType',
+        type: 'single' as const,
+        question: 'What type of application?',
+        options: [
+          { value: 'static', label: 'Static', description: 'Static site' },
+          { value: 'spa', label: 'SPA', description: 'Single page app' },
+        ],
+      },
+      {
+        id: 'cdnScripts',
+        type: 'multi' as const,
+        question: 'External scripts?',
+        hint: 'Select all that apply.',
+        options: [
+          { value: 'jsdelivr', label: 'jsDelivr', description: 'CDN' },
+        ],
+      },
+    ]),
+    generatePolicy: vi.fn(() => ({ 'default-src': ["'self'"], 'script-src': ["'self'"] })),
+  };
+}
+
 describe('EditorApp', () => {
   let mockParser: ICspParser;
   let mockGenerator: ICspGenerator;
@@ -136,6 +163,7 @@ describe('EditorApp', () => {
   let mockTemplateService: ICspTemplateService;
   let mockReportExporter: ICspReportExporter;
   let mockCspExporter: ICspExporter;
+  let mockQuiz: ICspQuiz;
   let app: EditorApp;
 
   beforeEach(() => {
@@ -149,7 +177,8 @@ describe('EditorApp', () => {
     mockTemplateService = createMockTemplateService();
     mockReportExporter = createMockReportExporter();
     mockCspExporter = createMockCspExporter();
-    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter);
+    mockQuiz = createMockQuiz();
+    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter, mockQuiz);
 
     // Mock matchMedia for dark mode tests
     Object.defineProperty(window, 'matchMedia', {
@@ -576,7 +605,8 @@ describe('EditorApp', () => {
       mockValidator,
       mockTemplateService,
       mockReportExporter,
-      mockCspExporter
+      mockCspExporter,
+      mockQuiz
     );
     const data = failApp.createAlpineData();
     data.directives = { 'default-src': ["'self'"] };
@@ -614,7 +644,8 @@ describe('EditorApp', () => {
       mockValidator,
       mockTemplateService,
       mockReportExporter,
-      mockCspExporter
+      mockCspExporter,
+      mockQuiz
     );
     const data = failApp.createAlpineData();
     

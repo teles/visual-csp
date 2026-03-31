@@ -227,3 +227,60 @@ export const CSP_DIRECTIVE_NAMES = [
   'block-all-mixed-content',
   'sandbox',
 ] as const;
+
+/** Question types: single-choice or multi-select. */
+export type QuestionType = 'single' | 'multi';
+
+/**
+ * A declarative CSP mutation applied by a quiz option.
+ * Exactly one of add | override | remove should be provided.
+ */
+export interface CspEffect {
+  directive: string;
+  /** Values to merge into the directive (deduped). */
+  add?: string[];
+  /** Replace the directive entirely ([] = boolean directive with no values). */
+  override?: string[];
+  /** Remove the directive from the policy. */
+  remove?: boolean;
+}
+
+/**
+ * A single option in a quiz question, co-located with its CSP effects.
+ */
+export interface QuizOption {
+  value: string;
+  label: string;
+  description: string;
+  /** Effects applied when this option is selected. Receives full answers for cross-question logic. */
+  effects?: (answers: QuizAnswers) => CspEffect[];
+}
+
+/**
+ * A quiz question. Supports single-choice and multi-select types.
+ */
+export interface QuizQuestion {
+  id: string;
+  type: QuestionType;
+  question: string;
+  /** Supplementary hint shown below the question (useful for multi). */
+  hint?: string;
+  options: QuizOption[];
+  /** Skip this question (and its effects) based on previous answers. */
+  skipIf?: (answers: QuizAnswers) => boolean;
+}
+
+/**
+ * User's answers to the quiz.
+ * Single questions store a string; multi questions store a string[].
+ */
+export type QuizAnswers = Record<string, string | string[]>;
+
+/**
+ * Contract for the CSP quiz feature.
+ * Single Responsibility: generates CSP policies from quiz answers.
+ */
+export interface ICspQuiz {
+  getQuestions(): QuizQuestion[];
+  generatePolicy(answers: QuizAnswers): CspDirectives;
+}

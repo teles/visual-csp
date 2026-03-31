@@ -18,5 +18,11 @@ export type {
   ICspReportExporter,
   ChipColor,
   ReportData,
+  QuizQuestion,
+  QuizAnswers,
+  QuizOption,
+  QuestionType,
+  CspEffect,
+  ICspQuiz,
 } from './types';
 export { CSP_KEYWORDS, CSP_DIRECTIVE_NAMES } from './types';

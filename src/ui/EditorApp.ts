@@ -7,10 +7,13 @@ import type {
   ICspExporter,
   ICspGenerator,
   ICspParser,
+  ICspQuiz,
   ICspReportExporter,
   ICspTemplateService,
   ICspValidator,
   IUrlStateManager,
+  QuizAnswers,
+  QuizQuestion,
   ReportData,
 } from '../core/types';
 import { CSP_KEYWORDS } from '../core/types';
@@ -35,7 +38,8 @@ export class EditorApp {
     private validator: ICspValidator,
     private templateService: ICspTemplateService,
     private reportExporter: ICspReportExporter,
-    private cspExporter: ICspExporter
+    private cspExporter: ICspExporter,
+    private quiz: ICspQuiz
   ) {}
 
   /**
@@ -62,6 +66,11 @@ export class EditorApp {
       collapsedDirectives: {} as Record<string, boolean>,
       templates: app.templateService.getTemplates(),
       showTemplates: false,
+      // Quiz state
+      showQuiz: false,
+      quizQuestions: app.quiz.getQuestions() as QuizQuestion[],
+      quizStep: 0,
+      quizAnswers: {} as QuizAnswers,
       directiveFilter: '',
       draggedDirective: null as string | null,
       dragOverDirective: null as string | null,
@@ -501,6 +510,96 @@ export class EditorApp {
           this.showTemplates = false;
           this.updateUrl();
         }
+      },
+
+      // --- Quiz ---
+      startQuiz() {
+        this.showQuiz = true;
+        this.quizStep = 0;
+        this.quizAnswers = {};
+      },
+
+      // Single-choice: set answer and auto-advance skipping skipIf questions.
+      // Multi-select: toggle the value in the array (no auto-advance).
+      answerQuiz(questionId: string, value: string) {
+        const question = this.quizQuestions.find((q: QuizQuestion) => q.id === questionId);
+        if (!question) return;
+
+        if (question.type === 'multi') {
+          this.toggleMultiAnswer(questionId, value);
+        } else {
+          this.quizAnswers[questionId] = value;
+          this.advanceQuiz();
+        }
+      },
+
+      toggleMultiAnswer(questionId: string, value: string) {
+        const current = this.quizAnswers[questionId];
+        const arr: string[] = Array.isArray(current) ? [...current] : [];
+        const idx = arr.indexOf(value);
+        if (idx >= 0) {
+          arr.splice(idx, 1);
+        } else {
+          arr.push(value);
+        }
+        this.quizAnswers[questionId] = arr;
+      },
+
+      isQuizOptionSelected(questionId: string, value: string): boolean {
+        const answer = this.quizAnswers[questionId];
+        return Array.isArray(answer) ? answer.includes(value) : answer === value;
+      },
+
+      // Advance to the next non-skipped question, or finish if none remain.
+      advanceQuiz() {
+        let next = this.quizStep + 1;
+        while (next < this.quizQuestions.length) {
+          if (!this.quizQuestions[next].skipIf?.(this.quizAnswers)) break;
+          next++;
+        }
+        if (next >= this.quizQuestions.length) {
+          this.applyQuizResults();
+        } else {
+          this.quizStep = next;
+        }
+      },
+
+      // Explicit advance for multi questions (called by "Next" button).
+      proceedQuiz() {
+        this.advanceQuiz();
+      },
+
+      quizBack() {
+        let prev = this.quizStep - 1;
+        while (prev > 0 && this.quizQuestions[prev].skipIf?.(this.quizAnswers)) {
+          prev--;
+        }
+        if (prev >= 0) {
+          this.quizStep = prev;
+        }
+      },
+
+      cancelQuiz() {
+        this.showQuiz = false;
+        this.quizStep = 0;
+        this.quizAnswers = {};
+      },
+
+      applyQuizResults() {
+        const policy = app.quiz.generatePolicy(this.quizAnswers);
+        this.directives = policy;
+        this.rawCsp = '';
+        this.showQuiz = false;
+        this.quizStep = 0;
+        this.quizAnswers = {};
+        this.updateUrl();
+        this.displayToast('CSP generated from quiz!', 'success');
+      },
+
+      get quizProgress(): number {
+        return this.quizQuestions.length > 0
+          ? Math.round(((this.quizStep + 1) / this.quizQuestions.length) * 100)
+          : 0;
       },
 
       clearWarning(type: 'directive' | 'value', directive?: string) {
