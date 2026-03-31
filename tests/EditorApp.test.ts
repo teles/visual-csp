@@ -19,6 +19,7 @@ import type {
   ChipColor,
   ValidationResult,
 } from '../src/core/types';
+import type { ICspClipperService } from '../src/services/CspClipperService';
 
 // --- Mock implementations ---
 function createMockParser(): ICspParser {
@@ -164,6 +165,7 @@ describe('EditorApp', () => {
   let mockReportExporter: ICspReportExporter;
   let mockCspExporter: ICspExporter;
   let mockQuiz: ICspQuiz;
+  let mockCspClipper: ICspClipperService;
   let app: EditorApp;
 
   beforeEach(() => {
@@ -178,7 +180,8 @@ describe('EditorApp', () => {
     mockReportExporter = createMockReportExporter();
     mockCspExporter = createMockCspExporter();
     mockQuiz = createMockQuiz();
-    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter, mockQuiz);
+    mockCspClipper = { fetchCsp: vi.fn() };
+    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter, mockQuiz, mockCspClipper);
 
     // Mock matchMedia for dark mode tests
     Object.defineProperty(window, 'matchMedia', {
@@ -606,7 +609,8 @@ describe('EditorApp', () => {
       mockTemplateService,
       mockReportExporter,
       mockCspExporter,
-      mockQuiz
+      mockQuiz,
+      mockCspClipper
     );
     const data = failApp.createAlpineData();
     data.directives = { 'default-src': ["'self'"] };
@@ -645,7 +649,8 @@ describe('EditorApp', () => {
       mockTemplateService,
       mockReportExporter,
       mockCspExporter,
-      mockQuiz
+      mockQuiz,
+      mockCspClipper
     );
     const data = failApp.createAlpineData();
     
@@ -655,5 +660,56 @@ describe('EditorApp', () => {
     
     expect(failClipboard.copyText).toHaveBeenCalled();
     expect(displayToastSpy).not.toHaveBeenCalled();
+  });
+
+  it('should fetch CSP from URL and parse it', async () => {
+    const mockCsp = "default-src 'self'; script-src 'none'";
+    vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+      url: 'https://example.com',
+      csp: mockCsp,
+    });
+
+    const data = app.createAlpineData();
+    data.fetchUrl = 'https://example.com';
+    await data.fetchFromUrl();
+
+    expect(mockCspClipper.fetchCsp).toHaveBeenCalledWith('https://example.com');
+    expect(data.rawCsp).toBe(mockCsp);
+    expect(data.fetchLoading).toBe(false);
+    expect(data.fetchError).toBe('');
+  });
+
+  it('should show error when no CSP header found', async () => {
+    vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+      url: 'https://example.com',
+      csp: null,
+      message: 'No CSP header found',
+    });
+
+    const data = app.createAlpineData();
+    data.fetchUrl = 'https://example.com';
+    await data.fetchFromUrl();
+
+    expect(data.fetchError).toBe('No CSP header found on this URL.');
+    expect(data.fetchLoading).toBe(false);
+  });
+
+  it('should show error when fetch fails', async () => {
+    vi.mocked(mockCspClipper.fetchCsp).mockRejectedValue(new Error('Network error'));
+
+    const data = app.createAlpineData();
+    data.fetchUrl = 'https://example.com';
+    await data.fetchFromUrl();
+
+    expect(data.fetchError).toBe('Network error');
+    expect(data.fetchLoading).toBe(false);
+  });
+
+  it('should not fetch when URL is empty', async () => {
+    const data = app.createAlpineData();
+    data.fetchUrl = '  ';
+    await data.fetchFromUrl();
+
+    expect(mockCspClipper.fetchCsp).not.toHaveBeenCalled();
   });
 });

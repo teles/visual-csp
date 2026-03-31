@@ -17,6 +17,7 @@ import type {
   ReportData,
 } from '../core/types';
 import { CSP_KEYWORDS } from '../core/types';
+import type { ICspClipperService } from '../services/CspClipperService';
 
 /**
  * Main Alpine.js component for the Visual CSP Editor.
@@ -39,7 +40,8 @@ export class EditorApp {
     private templateService: ICspTemplateService,
     private reportExporter: ICspReportExporter,
     private cspExporter: ICspExporter,
-    private quiz: ICspQuiz
+    private quiz: ICspQuiz,
+    private cspClipper: ICspClipperService
   ) {}
 
   /**
@@ -78,6 +80,9 @@ export class EditorApp {
       showToast: false,
       toastMessage: '',
       toastIcon: 'success' as 'success' | 'error' | 'info',
+      fetchUrl: '',
+      fetchLoading: false,
+      fetchError: '',
 
       // Alpine lifecycle
       init() {
@@ -181,6 +186,30 @@ export class EditorApp {
         }
         
         this.updateUrl();
+      },
+
+      async fetchFromUrl() {
+        const url = this.fetchUrl.trim();
+        if (!url) return;
+
+        this.fetchError = '';
+        this.fetchLoading = true;
+
+        try {
+          const result = await app.cspClipper.fetchCsp(url);
+
+          if (result.csp) {
+            this.rawCsp = result.csp;
+            this.parseCsp();
+            this.displayToast('CSP loaded successfully from URL', 'success');
+          } else {
+            this.fetchError = 'No CSP header found on this URL.';
+          }
+        } catch (err) {
+          this.fetchError = err instanceof Error ? err.message : 'Failed to fetch CSP.';
+        } finally {
+          this.fetchLoading = false;
+        }
       },
 
       validateRawCsp() {
