@@ -667,6 +667,7 @@ describe('EditorApp', () => {
     vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
       url: 'https://example.com',
       csp: mockCsp,
+      title: 'Example Site',
     });
 
     const data = app.createAlpineData();
@@ -675,8 +676,27 @@ describe('EditorApp', () => {
 
     expect(mockCspClipper.fetchCsp).toHaveBeenCalledWith('https://example.com');
     expect(data.rawCsp).toBe(mockCsp);
+    expect(data.projectName).toBe('Example Site');
+    expect(data.projectUrl).toBe('https://example.com');
     expect(data.fetchLoading).toBe(false);
     expect(data.fetchError).toBe('');
+  });
+
+  it('should not override projectName when title is null', async () => {
+    const mockCsp = "default-src 'self'";
+    vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+      url: 'https://example.com',
+      csp: mockCsp,
+      title: null,
+    });
+
+    const data = app.createAlpineData();
+    data.fetchUrl = 'https://example.com';
+    data.projectName = 'My existing project';
+    await data.fetchFromUrl();
+
+    expect(data.projectName).toBe('My existing project');
+    expect(data.projectUrl).toBe('https://example.com');
   });
 
   it('should show error when no CSP header found', async () => {

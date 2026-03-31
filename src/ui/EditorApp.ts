@@ -200,6 +200,8 @@ export class EditorApp {
 
           if (result.csp) {
             this.rawCsp = result.csp;
+            if (result.title) this.projectName = result.title;
+            this.projectUrl = url;
             this.parseCsp();
             this.displayToast('CSP loaded successfully from URL', 'success');
           } else {

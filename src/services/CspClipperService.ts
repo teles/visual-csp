@@ -3,6 +3,7 @@ const CSP_CLIPPER_URL = 'https://csp-clipper.josetelesmaciel.workers.dev';
 export interface CspClipperResponse {
   url: string;
   csp: string | null;
+  title: string | null;
   message?: string;
   error?: string;
 }
