@@ -37,6 +37,7 @@ function createMockParser(): ICspParser {
       });
       return result;
     }),
+    diagnose: vi.fn((): string[] => []),
   };
 }
 
@@ -820,6 +821,167 @@ describe('EditorApp', () => {
       data.resetEditor();
 
       expect(data.urlTestResult).toBeNull();
+    });
+  });
+
+  describe('parser diagnostics', () => {
+    it('includes parser warnings in the raw CSP warning', () => {
+      vi.mocked(mockParser.diagnose).mockReturnValue([
+        'Directive "script-src" appears more than once; browsers ignore every occurrence after the first.',
+      ]);
+      const data = app.createAlpineData();
+      data.rawCsp = "script-src 'self'; script-src *";
+
+      data.parseCsp();
+
+      expect(data.rawCspWarning).toContain('Found 1 issue(s)');
+      expect(data.rawCspWarning).toContain('appears more than once');
+    });
+  });
+
+  describe('fetched policies', () => {
+    it('loads the first enforced policy when the site sends several', async () => {
+      vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+        url: 'https://example.com',
+        csp: "default-src 'self'",
+        title: null,
+        policies: [
+          { policy: "default-src 'none'", reportOnly: true },
+          { policy: "default-src 'self'", reportOnly: false },
+          { policy: 'img-src *', reportOnly: false },
+        ],
+      });
+      const data = app.createAlpineData();
+      data.fetchUrl = 'https://example.com';
+
+      await data.fetchFromUrl();
+
+      expect(data.fetchedPolicies).toHaveLength(3);
+      expect(data.activePolicyIndex).toBe(1);
+      expect(data.rawCsp).toBe("default-src 'self'");
+      expect(data.isActivePolicyReportOnly()).toBe(false);
+    });
+
+    it('flags a report-only policy when that is all the site sends', async () => {
+      vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+        url: 'https://example.com',
+        csp: "default-src 'self'",
+        title: null,
+        reportOnly: true,
+        policies: [{ policy: "default-src 'self'", reportOnly: true }],
+      });
+      const data = app.createAlpineData();
+      data.fetchUrl = 'https://example.com';
+
+      await data.fetchFromUrl();
+
+      expect(data.activePolicyIndex).toBe(0);
+      expect(data.isActivePolicyReportOnly()).toBe(true);
+    });
+
+    it('supports responses from older clipper versions', async () => {
+      vi.mocked(mockCspClipper.fetchCsp).mockResolvedValue({
+        url: 'https://example.com',
+        csp: "default-src 'self'",
+        title: null,
+      });
+      const data = app.createAlpineData();
+      data.fetchUrl = 'https://example.com';
+
+      await data.fetchFromUrl();
+
+      expect(data.fetchedPolicies).toEqual([{ policy: "default-src 'self'", reportOnly: false }]);
+      expect(data.isActivePolicyReportOnly()).toBe(false);
+    });
+
+    it('switches between fetched policies', () => {
+      const data = app.createAlpineData();
+      data.fetchedPolicies = [
+        { policy: "default-src 'self'", reportOnly: false },
+        { policy: "script-src 'none'", reportOnly: true },
+      ];
+
+      data.loadFetchedPolicy(1);
+
+      expect(data.activePolicyIndex).toBe(1);
+      expect(data.rawCsp).toBe("script-src 'none'");
+      expect(data.directives).toEqual({ 'script-src': ["'none'"] });
+      expect(data.isActivePolicyReportOnly()).toBe(true);
+      expect(data.getFetchedPolicyLabel(1)).toBe('Policy 2 (report-only)');
+      expect(data.getFetchedPolicyLabel(0)).toBe('Policy 1 (enforced)');
+    });
+
+    it('ignores an out-of-range policy index', () => {
+      const data = app.createAlpineData();
+      data.fetchedPolicies = [{ policy: "default-src 'self'", reportOnly: false }];
+      data.rawCsp = 'img-src *';
+
+      data.loadFetchedPolicy(5);
+
+      expect(data.rawCsp).toBe('img-src *');
+    });
+
+    it('forgets fetched policies on reset, template and quiz', () => {
+      const data = app.createAlpineData();
+      const fetched = [{ policy: "default-src 'self'", reportOnly: true }];
+
+      data.fetchedPolicies = [...fetched];
+      data.resetEditor();
+      expect(data.fetchedPolicies).toEqual([]);
+
+      data.fetchedPolicies = [...fetched];
+      data.applyTemplate('test');
+      expect(data.fetchedPolicies).toEqual([]);
+
+      data.fetchedPolicies = [...fetched];
+      data.applyQuizResults();
+      expect(data.fetchedPolicies).toEqual([]);
+    });
+  });
+
+  describe('colored CSP tokens', () => {
+    it('renders directives, values and separators as text tokens', () => {
+      const data = app.createAlpineData();
+      data.directives = { 'default-src': ["'self'"], 'upgrade-insecure-requests': [] };
+
+      const tokens = data.getColoredCspTokens();
+
+      expect(tokens.map((t) => t.text).join('')).toBe("default-src 'self'; upgrade-insecure-requests");
+      expect(tokens[0].classes).toContain('text-indigo-700');
+      expect(tokens[2].classes).toContain('text-blue-700');
+    });
+
+    it('keeps markup in values as plain text', () => {
+      const data = app.createAlpineData();
+      data.directives = { 'script-src': ["'<img/src=x/onerror=alert(1)>'"] };
+
+      const tokens = data.getColoredCspTokens();
+
+      expect(tokens.map((t) => t.text)).toContain("'<img/src=x/onerror=alert(1)>'");
+    });
+  });
+
+  describe('panel toggles', () => {
+    it('toggles templates and closes the quiz', () => {
+      const data = app.createAlpineData();
+      data.showQuiz = true;
+
+      data.toggleTemplates();
+      expect(data.showTemplates).toBe(true);
+      expect(data.showQuiz).toBe(false);
+
+      data.toggleTemplates();
+      expect(data.showTemplates).toBe(false);
+    });
+
+    it('closes templates when the quiz starts', () => {
+      const data = app.createAlpineData();
+      data.showTemplates = true;
+
+      data.startQuiz();
+
+      expect(data.showTemplates).toBe(false);
+      expect(data.showQuiz).toBe(true);
     });
   });
 });

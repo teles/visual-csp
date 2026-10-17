@@ -1,4 +1,6 @@
 import type {
+  ChipColor,
+  ColoredToken,
   CspDirectives,
   EvaluationFinding,
   IChipColorizer,
@@ -20,7 +22,19 @@ import type {
   UrlMatchResult,
 } from '../core/types';
 import { CSP_KEYWORDS, RESOURCE_TYPE_OPTIONS } from '../core/types';
-import type { ICspClipperService } from '../services/CspClipperService';
+import type { FetchedPolicy, ICspClipperService } from '../services/CspClipperService';
+
+/** Text colors for each value category in the highlighted policy. */
+const VALUE_TOKEN_CLASSES: Record<ChipColor['category'], string> = {
+  keyword: 'text-purple-700 dark:text-purple-400',
+  nonce: 'text-teal-700 dark:text-teal-400',
+  hash: 'text-emerald-700 dark:text-emerald-400',
+  scheme: 'text-amber-700 dark:text-amber-400',
+  domain: 'text-blue-700 dark:text-blue-400',
+  wildcard: 'text-red-700 dark:text-red-400',
+};
+const DIRECTIVE_TOKEN_CLASSES = 'text-indigo-700 dark:text-indigo-300 font-semibold';
+const SEPARATOR_TOKEN_CLASSES = 'text-slate-400 dark:text-slate-500';
 
 /**
  * Main Alpine.js component for the Visual CSP Editor.
@@ -87,6 +101,8 @@ export class EditorApp {
       fetchUrl: '',
       fetchLoading: false,
       fetchError: '',
+      fetchedPolicies: [] as FetchedPolicy[],
+      activePolicyIndex: 0,
       // URL tester state
       resourceTypes: RESOURCE_TYPE_OPTIONS,
       urlTestInput: '',
@@ -151,7 +167,7 @@ export class EditorApp {
       parseCsp() {
         const parsed = app.parser.parse(this.rawCsp);
         const cleanDirectives: CspDirectives = {};
-        const warnings: string[] = [];
+        const warnings: string[] = app.parser.diagnose(this.rawCsp);
         
         for (const [directive, values] of Object.entries(parsed)) {
           // Validate directive name
@@ -208,12 +224,20 @@ export class EditorApp {
 
         try {
           const result = await app.cspClipper.fetchCsp(url);
+          // Older clipper versions only return a single `csp` string.
+          const policies: FetchedPolicy[] = result.policies?.length
+            ? result.policies
+            : result.csp
+              ? [{ policy: result.csp, reportOnly: !!result.reportOnly }]
+              : [];
 
-          if (result.csp) {
-            this.rawCsp = result.csp;
+          if (policies.length > 0) {
             if (result.title) this.projectName = result.title;
             this.projectUrl = url;
-            this.parseCsp();
+            this.fetchedPolicies = policies;
+            // Start with the first enforced policy, since that is what browsers block with.
+            const firstEnforced = policies.findIndex((p) => !p.reportOnly);
+            this.loadFetchedPolicy(firstEnforced === -1 ? 0 : firstEnforced);
             this.displayToast('CSP loaded successfully from URL', 'success');
           } else {
             this.fetchError = 'No CSP header found on this URL.';
@@ -223,6 +247,29 @@ export class EditorApp {
         } finally {
           this.fetchLoading = false;
         }
+      },
+
+      loadFetchedPolicy(index: number) {
+        const fetched = this.fetchedPolicies[index];
+        if (!fetched) return;
+        this.activePolicyIndex = index;
+        this.rawCsp = fetched.policy;
+        this.parseCsp();
+      },
+
+      isActivePolicyReportOnly(): boolean {
+        return !!this.fetchedPolicies[this.activePolicyIndex]?.reportOnly;
+      },
+
+      getFetchedPolicyLabel(index: number): string {
+        const fetched = this.fetchedPolicies[index];
+        if (!fetched) return '';
+        return `Policy ${index + 1} (${fetched.reportOnly ? 'report-only' : 'enforced'})`;
+      },
+
+      clearFetchedPolicies() {
+        this.fetchedPolicies = [];
+        this.activePolicyIndex = 0;
       },
 
       validateRawCsp() {
@@ -543,6 +590,7 @@ export class EditorApp {
         this.directiveFilter = '';
         this.urlTestResult = null;
         this.urlTestError = '';
+        this.clearFetchedPolicies();
         this.updateUrl();
       },
 
@@ -552,12 +600,19 @@ export class EditorApp {
           this.directives = policy;
           this.rawCsp = '';
           this.showTemplates = false;
+          this.clearFetchedPolicies();
           this.updateUrl();
         }
       },
 
+      toggleTemplates() {
+        this.showTemplates = !this.showTemplates;
+        this.showQuiz = false;
+      },
+
       // --- Quiz ---
       startQuiz() {
+        this.showTemplates = false;
         this.showQuiz = true;
         this.quizStep = 0;
         this.quizAnswers = {};
@@ -633,6 +688,7 @@ export class EditorApp {
         const policy = app.quiz.generatePolicy(this.quizAnswers);
         this.directives = policy;
         this.rawCsp = '';
+        this.clearFetchedPolicies();
         this.showQuiz = false;
         this.quizStep = 0;
         this.quizAnswers = {};
@@ -678,43 +734,23 @@ export class EditorApp {
         return app.colorizer.getColor(val).classes;
       },
 
-      getColoredCsp(): string {
-        const csp = this.generateCsp();
-        // Split by semicolon to get directives
-        const directives = csp.split(';').map(d => d.trim()).filter(Boolean);
-        const coloredDirectives = directives.map(directive => {
-          const [directiveName, ...values] = directive.split(/\s+/);
-          // Color the directive name
-          const coloredDirective = `<span class="text-indigo-700 dark:text-indigo-300 font-semibold">${directiveName}</span>`;
-          // Color each value
-          const coloredValues = values.map(value => {
-            const colorInfo = app.colorizer.getColor(value);
-            const colorClass = (() => {
-              switch (colorInfo.category) {
-                case 'keyword':
-                  return 'text-purple-700 dark:text-purple-400';
-                case 'nonce':
-                  return 'text-teal-700 dark:text-teal-400';
-                case 'hash':
-                  return 'text-emerald-700 dark:text-emerald-400';
-                case 'scheme':
-                  return 'text-amber-700 dark:text-amber-400';
-                case 'domain':
-                  return 'text-blue-700 dark:text-blue-400';
-                case 'wildcard':
-                  return 'text-red-700 dark:text-red-400';
-                default:
-                  return 'text-slate-700 dark:text-slate-300';
-              }
-            })();
-            
-            return `<span class="${colorClass}">${value}</span>`;
-          }).join(' ');
-          
-          return coloredValues ? `${coloredDirective} ${coloredValues}` : coloredDirective;
+      /**
+       * Syntax-highlighted policy as plain-text tokens. Rendered with x-text,
+       * never as HTML, so values from shared links or fetched headers cannot inject markup.
+       */
+      getColoredCspTokens(): ColoredToken[] {
+        const tokens: ColoredToken[] = [];
+        Object.entries(this.directives).forEach(([name, values], index) => {
+          if (index > 0) {
+            tokens.push({ text: ';', classes: SEPARATOR_TOKEN_CLASSES }, { text: ' ', classes: '' });
+          }
+          tokens.push({ text: name, classes: DIRECTIVE_TOKEN_CLASSES });
+          for (const value of values) {
+            const { category } = app.colorizer.getColor(value);
+            tokens.push({ text: ' ', classes: '' }, { text: value, classes: VALUE_TOKEN_CLASSES[category] });
+          }
         });
-        
-        return coloredDirectives.join('<span class="text-slate-400 dark:text-slate-500">;</span> ');
+        return tokens;
       },
 
       // --- Security Evaluation ---

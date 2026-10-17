@@ -1,4 +1,5 @@
-import Alpine from 'alpinejs';
+// CSP build: evaluates expressions without eval, so the site's CSP can drop 'unsafe-eval'.
+import Alpine from '@alpinejs/csp';
 import { CspParser, CspGenerator, CspSecurityEvaluator, CspValidator, CspUrlMatcher } from './core';
 import { CspTemplateService } from './core/CspTemplates';
 import { CspQuiz } from './core/CspQuiz';

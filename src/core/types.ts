@@ -45,6 +45,8 @@ export interface EvaluationFinding {
  */
 export interface ICspParser {
   parse(raw: string): CspDirectives;
+  /** Human-readable warnings about parts of the input that parse() ignores. */
+  diagnose(raw: string): string[];
 }
 
 /**
@@ -179,6 +181,14 @@ export interface IChipColorizer {
 export interface ChipColor {
   classes: string;
   category: 'keyword' | 'nonce' | 'hash' | 'scheme' | 'domain' | 'wildcard';
+}
+
+/**
+ * A run of text in the syntax-highlighted policy, rendered with x-text.
+ */
+export interface ColoredToken {
+  text: string;
+  classes: string;
 }
 
 /**
