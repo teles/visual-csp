@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.1.1
+
+Released on 2026-10-17.
+
+### Bug Fixes
+
+- harden the site CSP and align policy parsing with browsers ([f27dc62](https://github.com/teles/visual-csp/commit/f27dc622ac182c081a21371e7bb84e08149e5211))
+
+### Other Changes
+
+- Merge pull request #29 from teles/fix/csp-correctness-and-security ([cdd939e](https://github.com/teles/visual-csp/commit/cdd939e21abfafc46b08750aa07e604d8e72693d))
+
+[Compare changes](https://github.com/teles/visual-csp/compare/v1.1.0...v1.1.1)
+
 ## v1.1.0
 
 Released on 2026-10-17.
