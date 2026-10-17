@@ -838,6 +838,91 @@
             </div>
           </template>
 
+          <!-- URL Tester -->
+          <section
+            x-show="Object.keys(directives).length > 0"
+            x-transition
+            class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700"
+          >
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
+              <h4 class="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-slate-900 dark:text-white">
+                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Test a URL
+              </h4>
+            </div>
+            <div class="p-6 bg-white dark:bg-slate-900 space-y-4">
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Check whether the browser would load a URL under this policy.
+                <code class="mono">'self'</code> and relative URLs use the Target URL from Configuration.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  x-model="urlTestInput"
+                  @keydown.enter="testUrl()"
+                  aria-label="URL to test"
+                  placeholder="https://cdn.example.com/app.js"
+                  class="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400 dark:placeholder-slate-500 mono"
+                />
+                <select
+                  x-model="urlTestType"
+                  @change="refreshUrlTest()"
+                  aria-label="Request type"
+                  class="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <template x-for="option in resourceTypes" :key="option.value">
+                    <option :value="option.value" x-text="option.label" :selected="option.value === urlTestType"></option>
+                  </template>
+                </select>
+                <button
+                  @click="testUrl()"
+                  :disabled="!urlTestInput.trim()"
+                  class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  Test
+                </button>
+              </div>
+
+              <div
+                x-show="urlTestError"
+                class="p-3 rounded-lg text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                x-text="urlTestError"
+              ></div>
+
+              <template x-if="urlTestResult">
+                <div
+                  class="p-4 border rounded-lg text-sm space-y-2"
+                  :class="urlTestResult.allowed
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-200'
+                    : 'bg-red-50 border-red-200 text-red-900 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                      :class="urlTestResult.allowed ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'"
+                      x-text="urlTestResult.allowed ? 'Allowed' : 'Blocked'"
+                    ></span>
+                    <span class="mono text-xs break-all" x-text="urlTestResult.testedUrl"></span>
+                  </div>
+                  <p x-text="urlTestResult.reason"></p>
+                  <p class="text-xs opacity-80">
+                    <span>Checked: </span>
+                    <span class="mono" x-text="urlTestResult.effectiveDirective"></span>
+                    <template x-if="urlTestResult.appliedDirective && urlTestResult.appliedDirective !== urlTestResult.effectiveDirective">
+                      <span> → applied <span class="mono" x-text="urlTestResult.appliedDirective"></span></span>
+                    </template>
+                  </p>
+                  <ul x-show="urlTestResult.notes.length > 0" class="text-xs list-disc pl-5 space-y-1 opacity-90">
+                    <template x-for="(note, index) in urlTestResult.notes" :key="index">
+                      <li x-text="note"></li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </div>
+          </section>
+
           <!-- Security Findings -->
           <section
             x-show="findings.length > 0"
