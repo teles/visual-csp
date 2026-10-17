@@ -71,4 +71,46 @@ describe('CspParser', () => {
     expect(result['img-src']).toContain('data:');
     expect(result['upgrade-insecure-requests']).toEqual([]);
   });
+
+  describe('duplicate directives', () => {
+    it('keeps the first occurrence, like browsers do', () => {
+      const result = parser.parse("script-src 'self'; img-src *; script-src *");
+      expect(result['script-src']).toEqual(["'self'"]);
+    });
+
+    it('matches duplicates case-insensitively', () => {
+      const result = parser.parse("script-src 'self'; SCRIPT-SRC *");
+      expect(result).toEqual({ 'script-src': ["'self'"] });
+    });
+
+    it('warns about each duplicated directive once', () => {
+      const warnings = parser.diagnose("script-src 'self'; script-src *; script-src 'none'; img-src *");
+      expect(warnings).toEqual([
+        'Directive "script-src" appears more than once; browsers ignore every occurrence after the first.',
+      ]);
+    });
+  });
+
+  describe('comma-separated policies', () => {
+    it('parses only the first policy', () => {
+      const result = parser.parse("default-src 'self', script-src 'none'");
+      expect(result).toEqual({ 'default-src': ["'self'"] });
+    });
+
+    it('strips the header prefix before splitting', () => {
+      const result = parser.parse("Content-Security-Policy: img-src *, script-src 'none'");
+      expect(result).toEqual({ 'img-src': ['*'] });
+    });
+
+    it('warns that the other policies were not loaded', () => {
+      const warnings = parser.diagnose("default-src 'self', script-src 'none', img-src *");
+      expect(warnings).toEqual([
+        'Found 3 comma-separated policies; only the first was loaded. Browsers enforce all of them.',
+      ]);
+    });
+  });
+
+  it('returns no warnings for a clean policy', () => {
+    expect(parser.diagnose("default-src 'self'; script-src https://cdn.com")).toEqual([]);
+  });
 });
