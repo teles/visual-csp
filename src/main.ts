@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import { CspParser, CspGenerator, CspSecurityEvaluator, CspValidator } from './core';
+import { CspParser, CspGenerator, CspSecurityEvaluator, CspValidator, CspUrlMatcher } from './core';
 import { CspTemplateService } from './core/CspTemplates';
 import { CspQuiz } from './core/CspQuiz';
 import { UrlStateManager, ClipboardService, CspReportExporter, CspExporter, CspClipperService } from './services';
@@ -20,6 +20,7 @@ const reportExporter = new CspReportExporter();
 const cspExporter = new CspExporter();
 const quiz = new CspQuiz();
 const cspClipper = new CspClipperService();
+const urlMatcher = new CspUrlMatcher();
 
 const editorApp = new EditorApp(
   parser,
@@ -33,7 +34,8 @@ const editorApp = new EditorApp(
   reportExporter,
   cspExporter,
   quiz,
-  cspClipper
+  cspClipper,
+  urlMatcher
 );
 
 // Register Alpine.js component

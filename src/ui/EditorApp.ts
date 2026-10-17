@@ -10,13 +10,16 @@ import type {
   ICspQuiz,
   ICspReportExporter,
   ICspTemplateService,
+  ICspUrlMatcher,
   ICspValidator,
   IUrlStateManager,
   QuizAnswers,
   QuizQuestion,
   ReportData,
+  ResourceType,
+  UrlMatchResult,
 } from '../core/types';
-import { CSP_KEYWORDS } from '../core/types';
+import { CSP_KEYWORDS, RESOURCE_TYPE_OPTIONS } from '../core/types';
 import type { ICspClipperService } from '../services/CspClipperService';
 
 /**
@@ -41,7 +44,8 @@ export class EditorApp {
     private reportExporter: ICspReportExporter,
     private cspExporter: ICspExporter,
     private quiz: ICspQuiz,
-    private cspClipper: ICspClipperService
+    private cspClipper: ICspClipperService,
+    private urlMatcher: ICspUrlMatcher
   ) {}
 
   /**
@@ -83,6 +87,12 @@ export class EditorApp {
       fetchUrl: '',
       fetchLoading: false,
       fetchError: '',
+      // URL tester state
+      resourceTypes: RESOURCE_TYPE_OPTIONS,
+      urlTestInput: '',
+      urlTestType: 'script' as ResourceType,
+      urlTestResult: null as UrlMatchResult | null,
+      urlTestError: '',
 
       // Alpine lifecycle
       init() {
@@ -134,6 +144,7 @@ export class EditorApp {
           rawCsp: this.rawCsp,
         });
         this.evaluateFindings();
+        this.refreshUrlTest();
       },
 
       // --- CSP Logic ---
@@ -530,6 +541,8 @@ export class EditorApp {
         this.valueWarnings = {};
         this.rawCspWarning = '';
         this.directiveFilter = '';
+        this.urlTestResult = null;
+        this.urlTestError = '';
         this.updateUrl();
       },
 
@@ -708,6 +721,29 @@ export class EditorApp {
       evaluateFindings() {
         const csp = this.generateCsp();
         this.findings = app.evaluator.evaluate(csp);
+      },
+
+      // --- URL Tester ---
+      testUrl() {
+        this.urlTestError = '';
+        try {
+          this.urlTestResult = app.urlMatcher.match(
+            this.directives,
+            this.urlTestInput,
+            this.urlTestType,
+            this.projectUrl
+          );
+        } catch (err) {
+          this.urlTestResult = null;
+          this.urlTestError = err instanceof Error ? err.message : 'Could not test this URL.';
+        }
+      },
+
+      // Keep a shown result in sync while the policy is edited.
+      refreshUrlTest() {
+        if (this.urlTestResult) {
+          this.testUrl();
+        }
       },
 
       getSeverityColor(finding: EvaluationFinding): string {

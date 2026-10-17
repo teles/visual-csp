@@ -284,3 +284,76 @@ export interface ICspQuiz {
   getQuestions(): QuizQuestion[];
   generatePolicy(answers: QuizAnswers): CspDirectives;
 }
+
+/**
+ * Kinds of requests that can be tested against a policy.
+ * Each maps to the CSP directive that governs it.
+ */
+export type ResourceType =
+  | 'script'
+  | 'style'
+  | 'img'
+  | 'font'
+  | 'connect'
+  | 'media'
+  | 'object'
+  | 'frame'
+  | 'worker'
+  | 'manifest'
+  | 'form-action'
+  | 'frame-ancestors'
+  | 'base-uri';
+
+/**
+ * Outcome of testing a URL against a policy.
+ */
+export interface UrlMatchResult {
+  allowed: boolean;
+  /** The URL actually tested (resolved and possibly upgraded to https). */
+  testedUrl: string;
+  resourceType: ResourceType;
+  /** Directive the browser looks for first (e.g. script-src-elem). */
+  effectiveDirective: string;
+  /** Directive that decided the outcome after fallback, or null if none applies. */
+  appliedDirective: string | null;
+  /** Source expression that allowed the request, if any. */
+  matchedSource: string | null;
+  /** Human-readable explanation of the outcome. */
+  reason: string;
+  /** Extra caveats (strict-dynamic, mixed content, 'self' without page URL...). */
+  notes: string[];
+}
+
+/**
+ * Contract for testing URLs against a policy.
+ * Single Responsibility: implements the CSP3 URL matching algorithm.
+ */
+export interface ICspUrlMatcher {
+  /**
+   * @param directives - The policy to test against.
+   * @param url - The resource URL (relative URLs resolve against pageUrl).
+   * @param type - What kind of request loads the URL.
+   * @param pageUrl - URL of the page applying the policy, used for 'self'.
+   * @throws Error when the URL cannot be parsed.
+   */
+  match(directives: CspDirectives, url: string, type: ResourceType, pageUrl?: string): UrlMatchResult;
+}
+
+/**
+ * Resource types offered by the URL tester, in display order.
+ */
+export const RESOURCE_TYPE_OPTIONS: ReadonlyArray<{ value: ResourceType; label: string }> = [
+  { value: 'script', label: 'Script (<script src>)' },
+  { value: 'style', label: 'Stylesheet (<link rel=stylesheet>)' },
+  { value: 'img', label: 'Image' },
+  { value: 'font', label: 'Font' },
+  { value: 'connect', label: 'fetch / XHR / WebSocket' },
+  { value: 'frame', label: 'Iframe' },
+  { value: 'media', label: 'Audio / video' },
+  { value: 'worker', label: 'Worker' },
+  { value: 'object', label: 'Plugin (<object>/<embed>)' },
+  { value: 'manifest', label: 'Web app manifest' },
+  { value: 'form-action', label: 'Form submission' },
+  { value: 'frame-ancestors', label: 'Page embedding this site' },
+  { value: 'base-uri', label: '<base href>' },
+];

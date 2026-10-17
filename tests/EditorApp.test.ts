@@ -12,12 +12,14 @@ import type {
   ICspReportExporter,
   ICspExporter,
   ICspQuiz,
+  ICspUrlMatcher,
   CspDirectives,
   CspTemplate,
   EditorState,
   EvaluationFinding,
   ChipColor,
   ValidationResult,
+  UrlMatchResult,
 } from '../src/core/types';
 import type { ICspClipperService } from '../src/services/CspClipperService';
 
@@ -127,6 +129,21 @@ function createMockCspExporter(): ICspExporter {
   };
 }
 
+function createMockUrlMatcher(): ICspUrlMatcher {
+  return {
+    match: vi.fn((_directives, url: string, type): UrlMatchResult => ({
+      allowed: true,
+      testedUrl: url,
+      resourceType: type,
+      effectiveDirective: 'script-src-elem',
+      appliedDirective: 'script-src',
+      matchedSource: "'self'",
+      reason: "Allowed by script-src: matches 'self'.",
+      notes: [],
+    })),
+  };
+}
+
 function createMockQuiz(): ICspQuiz {
   return {
     getQuestions: vi.fn(() => [
@@ -166,6 +183,7 @@ describe('EditorApp', () => {
   let mockCspExporter: ICspExporter;
   let mockQuiz: ICspQuiz;
   let mockCspClipper: ICspClipperService;
+  let mockUrlMatcher: ICspUrlMatcher;
   let app: EditorApp;
 
   beforeEach(() => {
@@ -181,7 +199,8 @@ describe('EditorApp', () => {
     mockCspExporter = createMockCspExporter();
     mockQuiz = createMockQuiz();
     mockCspClipper = { fetchCsp: vi.fn() };
-    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter, mockQuiz, mockCspClipper);
+    mockUrlMatcher = createMockUrlMatcher();
+    app = new EditorApp(mockParser, mockGenerator, mockEvaluator, mockUrlState, mockClipboard, mockColorizer, mockValidator, mockTemplateService, mockReportExporter, mockCspExporter, mockQuiz, mockCspClipper, mockUrlMatcher);
 
     // Mock matchMedia for dark mode tests
     Object.defineProperty(window, 'matchMedia', {
@@ -610,7 +629,8 @@ describe('EditorApp', () => {
       mockReportExporter,
       mockCspExporter,
       mockQuiz,
-      mockCspClipper
+      mockCspClipper,
+      mockUrlMatcher
     );
     const data = failApp.createAlpineData();
     data.directives = { 'default-src': ["'self'"] };
@@ -650,7 +670,8 @@ describe('EditorApp', () => {
       mockReportExporter,
       mockCspExporter,
       mockQuiz,
-      mockCspClipper
+      mockCspClipper,
+      mockUrlMatcher
     );
     const data = failApp.createAlpineData();
     
@@ -732,5 +753,73 @@ describe('EditorApp', () => {
     await data.fetchFromUrl();
 
     expect(mockCspClipper.fetchCsp).not.toHaveBeenCalled();
+  });
+
+  describe('URL tester', () => {
+    it('tests the URL against the current directives and page URL', () => {
+      const data = app.createAlpineData();
+      data.directives = { 'script-src': ["'self'"] };
+      data.projectUrl = 'https://example.com';
+      data.urlTestInput = '/app.js';
+      data.urlTestType = 'script';
+
+      data.testUrl();
+
+      expect(mockUrlMatcher.match).toHaveBeenCalledWith(
+        { 'script-src': ["'self'"] },
+        '/app.js',
+        'script',
+        'https://example.com'
+      );
+      expect(data.urlTestResult?.allowed).toBe(true);
+      expect(data.urlTestError).toBe('');
+    });
+
+    it('shows the matcher error and clears the previous result', () => {
+      const data = app.createAlpineData();
+      data.urlTestInput = 'https://cdn.com/a.js';
+      data.testUrl();
+      expect(data.urlTestResult).not.toBeNull();
+
+      vi.mocked(mockUrlMatcher.match).mockImplementation(() => {
+        throw new Error('"x" is not a valid URL.');
+      });
+      data.urlTestInput = 'x';
+      data.testUrl();
+
+      expect(data.urlTestResult).toBeNull();
+      expect(data.urlTestError).toBe('"x" is not a valid URL.');
+    });
+
+    it('re-runs a shown test when the policy changes', () => {
+      const data = app.createAlpineData();
+      data.directives = { 'script-src': ["'self'"] };
+      data.urlTestInput = 'https://cdn.com/a.js';
+      data.testUrl();
+      vi.mocked(mockUrlMatcher.match).mockClear();
+
+      data.directives['script-src'].push('https://cdn.com');
+      data.updateUrl();
+
+      expect(mockUrlMatcher.match).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run a test on policy changes before the user tests a URL', () => {
+      const data = app.createAlpineData();
+      data.directives = { 'script-src': ["'self'"] };
+      data.updateUrl();
+
+      expect(mockUrlMatcher.match).not.toHaveBeenCalled();
+    });
+
+    it('clears the result on reset', () => {
+      const data = app.createAlpineData();
+      data.urlTestInput = 'https://cdn.com/a.js';
+      data.testUrl();
+
+      data.resetEditor();
+
+      expect(data.urlTestResult).toBeNull();
+    });
   });
 });
